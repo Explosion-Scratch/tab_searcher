@@ -3,6 +3,7 @@ chrome.commands.onCommand.addListener((command) => {
         main();
     }
 })
+
 let stuff = {};
 let index = null;
 let json;
@@ -85,12 +86,35 @@ chrome.runtime.onMessage.addListener(
         if (type === "tabs"){
             chrome.windows.update(request.item.windowId, {focused: true});
             chrome.tabs.update(request.item.id, {active: true});
-        } else if (["bookmarks", "history"].includes(type)){
-            chrome.tabs.create({url: request.item.url});
-        };
+        } else if (request.item.url || request.item._url){
+            // item._url is used when the URL is present but not shown
+            chrome.tabs.create({url: request.item.url || request.item._url});
+        } 
         return sendResponse({});
     } else if (request.type === "quickAnswer"){
-        return sendResponse([]);
+        ;(async () => {
+            try {
+                let a = await answer(request.query);
+                if (a){
+                    sendResponse([{
+                        highlight: true, 
+                        subtitle: "Quick result from google", 
+                        title: a, 
+                        icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--ph" width="32" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 256"><path d="M176.002 232a8 8 0 0 1-8 8h-80a8 8 0 1 1 0-16h80a8 8 0 0 1 8 8zm40-128a87.543 87.543 0 0 1-33.641 69.208a16.23 16.23 0 0 0-6.359 12.768V192a16.018 16.018 0 0 1-16 16h-64a16.018 16.018 0 0 1-16-16v-6.031a16.018 16.018 0 0 0-6.229-12.66a87.576 87.576 0 0 1-33.77-68.814c-.262-47.662 38.264-87.35 85.882-88.47A88.001 88.001 0 0 1 216.002 104zm-16 0a72 72 0 0 0-73.74-71.98c-38.956.918-70.473 33.39-70.259 72.387a71.658 71.658 0 0 0 27.637 56.307a31.922 31.922 0 0 1 12.362 25.255V192h64v-6.024a32.138 32.138 0 0 1 12.468-25.345A71.636 71.636 0 0 0 200.002 104zm-16.788-9.396a55.85 55.85 0 0 0-45.764-45.708a8 8 0 1 0-2.655 15.777a39.84 39.84 0 0 1 32.644 32.604a8.003 8.003 0 0 0 7.878 6.664a8.103 8.103 0 0 0 1.347-.113a8 8 0 0 0 6.55-9.224z" fill="currentColor"></path></svg>`
+                    }]);
+                } else {
+                    sendResponse([{
+                        //First link
+                        subtitle: "First link from google",
+                        //"d" is defined in the answer function
+                        title: d.querySelector(".g h3").innerText,
+                        _url: d.querySelector(".g a").href,
+                    }]);
+                }
+            } catch(_){ console.error(_); sendResponse([])}
+        })();
+        //Old version
+        /* 
         fetch(`https://apis.explosionscratc.repl.co/quick-answer?q=${encodeURIComponent(request.query)}`)
             .then(res => res.json())
             .then((quickAnswer) => {
@@ -106,23 +130,33 @@ chrome.runtime.onMessage.addListener(
                     sendResponse(r);
                 } else {sendResponse([])};
             });
+        */
+        
         //Makes it async (I think)
         return true;
     }
   }
 );
 
+setInterval(updateStuff, 2000);
 
+async function updateStuff(){
+    //Make it open faster by just polling. Not super efficient, I know
+     stuff = {
+        tabs: await new Promise(res => chrome.tabs.query({}, res)),
+        bookmarks: await getBookmarks(),
+        history: await new Promise(res => chrome.history.search({text: ""}, res)),
+        downloads: (await new Promise(res => chrome.downloads.search({}, res))).filter(i => i.filename),
+    }
+    return;
+}
 async function main(){
     let vue = await fetch("vue.js").then(res => res.text());
     let math = await fetch("math.js").then(res => res.text());
     let script = await fetch("main.js").then(res => res.text());
     let {id: tab} = await new Promise(res => chrome.tabs.query({currentWindow: true, active : true}, ([t]) => res(t)));
-    stuff = {
-        tabs: await new Promise(res => chrome.tabs.query({}, res)),
-         bookmarks: await getBookmarks(),
-         history: await new Promise(res => chrome.history.search({text: ""}, res)),
-        downloads: (await new Promise(res => chrome.downloads.search({}, res))).filter(i => i.filename),
+    if (!Object.keys(stuff).length){
+        await updateStuff();
     }
     let code = interpolate({
             style: await fetch("popup_style.css").then(res => res.text()),
@@ -217,4 +251,115 @@ function unique(array, compareObjects) {
         }
         return r;
     }, []);
+}
+
+;((window) => {
+  var _fetch = window.fetch; //Get the original fetch functionm
+
+  window.fetch = (url, opts = {}) => {
+    if (!window.FETCH_CACHE) {
+      window.FETCH_CACHE = {};
+    }
+    return new Promise((resolve) => {
+      /* 
+      Generate a sort of unique key about this fetch request. 
+      GET requests will have `opts.method` and `opts.body` as 
+      undefined, which will be removed by JSON.stringify.
+
+      For a fetch call such as this:
+
+      fetch("https://apis.explosionscratc.repl.co/google?q=dogs")
+
+      the key would be:
+      "{url: 'https://apis.explosionscratc.repl.co'}"
+      For a POST/DELETE/PUT request however, the key would also have the opts.method and opts.body (and possibly headers).
+      */
+
+      var key = JSON.stringify({
+        url,
+        method: opts.method,
+        body: opts.body,
+        headers: JSON.stringify(opts.headers),
+      });
+
+      //First check for existing cache entries:
+      if (window.FETCH_CACHE[key]) {
+        //Important to re-clone the response, otherwise we can't fetch something more than once!
+        resolve(window.FETCH_CACHE[key].clone());
+        console.log("Fetched from cache");
+        return; //Important so we don't fetch anyways!
+      }
+
+      _fetch(url, opts).then((res) => {
+        window.FETCH_CACHE[key] = res.clone(); //Store the response in the cache
+        resolve(res); //Respond with the response of the fetch.
+        console.log("Fetched new version");
+      });
+    });
+  };
+})(globalThis);
+
+async function answer(q) {
+  var html = await fetch(
+    `https://cors.explosionscratc.repl.co/google.com/search?q=${encodeURI(q)}`,
+    {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (X11; CrOS x86_64 13982.88.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.162 Safari/537.36",
+      },
+    }
+  ).then((res) => res.text());
+  window.d = new DOMParser().parseFromString(html, "text/html");
+  var el =
+    d.querySelector("[id*='lrtl-translation-text']") ||
+    [...d.querySelectorAll(".kp-header [data-md]")][1] ||
+    //Calculator results
+    [...document.querySelectorAll(".kCrYT")]?.[1] ||
+    [...d.querySelectorAll("*")]
+      .filter((i) => i.innerText)
+      .filter((i) => i.innerText.includes("Calculator Result"))
+      .slice(-2)?.[0]
+      ?.innerText?.split("\n")?.[2] ||
+    //Snippets
+    [...d.querySelectorAll("div, span")]
+      .filter((i) => i.innerText)
+      .filter(
+        (i) =>
+          i.innerText.includes("Featured snippet from the web") ||
+          i.innerText.includes("Description") ||
+          i.innerText.includes("Calculator result")
+      )?.slice(-1)?.[0]?.innerText?.replace(/^(?:description|calculator result | featured snippet from the web)/i, "") ||
+    //Cards (like at the side)
+    d.querySelector(
+      ".card-section, [class*='__wholepage-card'] [class*='desc'], .kno-rdesc"
+    ) ||
+    //Definitions
+    [...d.querySelectorAll(".thODed")]
+      .map((i) => i.querySelector("div span"))
+      .map((i, idx) => `${idx + 1}. ${i?.innerText}`)
+      .join("\n") ||
+    [...d.querySelectorAll("[data-async-token]")]?.slice(-1)?.[0] ||
+    d.querySelector("miniapps-card-header")?.parentElement ||
+    d.querySelector("#tw-target");
+  var text =
+    typeof el == "array" || typeof el == "string" ? el : el?.innerText?.trim();
+  if (text?.startsWith("Did you mean") || text?.startsWith("In order to show you the most relevant results,")){
+    return;
+  }
+  if (text?.includes("translation") && text?.includes("Google Translate")) {
+    text = text.split("Verified")[0].trim();
+  }
+  text = text?.split("();")?.slice(-1)?.[0]?.split("http")?.[0];//In case we get a script.
+  text = text?.split(/Wikipedia[A-Z]/)?.[0];//Sometimes it adds random stuff to the end. This usually ends in "WikipediaRandomstuff"
+  if (
+    text?.includes("Calculator Result") &&
+    text?.includes("Your calculations and results")
+  ) {
+    text = text
+      .split("them")?.[1]
+      .split("(function()")?.[0]
+      ?.split("=")?.[1]
+      ?.trim();
+  }
+  return text;
 }

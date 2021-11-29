@@ -71,7 +71,7 @@
     width: 100vw;
     height: 100vh;
     background: var(--overlay-bg);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(2px);
     display: block;
     position: fixed;
     top: 0;

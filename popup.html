@@ -34,7 +34,7 @@
                             <span class="action_label">{{action.label}}</span>
                         </div>
                     </li>
-                    <!-- <hr class="divider" /> -->
+                    <hr style="display: block; width: 100%; height: 7px;" v-if="!query.length && showHome">
                 </ul>
 				<ul class="entries" v-if="query.length || !showHome">
 					<li v-for="(item, idx) in results" :key="item.url" :tabindex="idx + 1" @click="open(item)" :class="`${item.highlight ? 'highlight_listitem' : ''}`">
@@ -112,7 +112,7 @@
 							</h4>
                             <span v-if="item.type === 'downloads'" class="popup_link">{{formatBytes(item.fileSize)}} - Downloaded from {{domain(item.finalUrl)}}</span>
                             <span v-if="item.subtitle" class="popup_link">{{item.subtitle}}</span>
-							<a v-if="item.url" v-if="item.type !== 'downloads'" class="popup_link" @click.prevent :href="item.url" :alt="item.url"
+							<a v-if="item.url && item.type !== 'downloads'" class="popup_link" @click.prevent :href="item.url" :alt="item.url"
 								>{{formatURL(item.url)}}</a
 							>
 						</div>
