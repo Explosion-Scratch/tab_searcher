@@ -1,0 +1,17 @@
+{
+    "name": "Spotlight search for chrome",
+    "description": "test",
+    "version": "0.0.1",
+    "background": {"scripts": ["fuse.js", "background.js"]},
+    "permissions": ["tabs", "history", "bookmarks", "commands", "<all_urls>", "downloads"],
+    "manifest_version": 2,
+    "commands": {
+        "search": {
+          "suggested_key": {
+            "default": "Ctrl+Space",
+            "mac": "Command+Space"
+          },
+          "description": "Run the extension"
+        }
+    }
+}
