@@ -1,13 +1,23 @@
+//background.js
+
 chrome.commands.onCommand.addListener((command) => {
     if (command === "search"){
         main();
     }
 })
 
+chrome.browserAction.onClicked.addListener((tab) => {
+    //We already know the tab
+    //TODO: Check that this isn't the tab ID but the actual tab
+    main(tab);
+})
+
+//Declare variables
 let stuff = {};
 let index = null;
 let json;
 
+//Semicolon at the beginning is good luck
 ;(async () => {
     //Sometimes throws an error if you don't do this, no idea why.
     json = (await fetch("top.csv").then(res => res.text())).split("\n").map(i => i.split(",")[1]);
@@ -64,6 +74,7 @@ chrome.runtime.onMessage.addListener(
                 console.log(out[0]);
             }
         }
+        //Unique by compare function
         out = (unique(out, (a, b) => {
             try {
             a = new URL(a.url);
@@ -75,6 +86,7 @@ chrome.runtime.onMessage.addListener(
             return (a.hostname === b.hostname && a.pathname === b.pathname);
         }));
         console.log("Unique: ", out);
+        //Limit it to 30 items to keep things responsive.
         return sendResponse(out.slice(0, 30));
     } else if (request.type === "itemClicked"){
         console.log(request.item);
@@ -94,8 +106,10 @@ chrome.runtime.onMessage.addListener(
     } else if (request.type === "quickAnswer"){
         ;(async () => {
             try {
+                //Get google quick answers!
                 let a = await answer(request.query);
                 if (a){
+                    //sendResponse sends an array of items to display, this is then handled by main.js
                     sendResponse([{
                         highlight: true, 
                         subtitle: "Quick result from google", 
@@ -103,6 +117,8 @@ chrome.runtime.onMessage.addListener(
                         icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--ph" width="32" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 256"><path d="M176.002 232a8 8 0 0 1-8 8h-80a8 8 0 1 1 0-16h80a8 8 0 0 1 8 8zm40-128a87.543 87.543 0 0 1-33.641 69.208a16.23 16.23 0 0 0-6.359 12.768V192a16.018 16.018 0 0 1-16 16h-64a16.018 16.018 0 0 1-16-16v-6.031a16.018 16.018 0 0 0-6.229-12.66a87.576 87.576 0 0 1-33.77-68.814c-.262-47.662 38.264-87.35 85.882-88.47A88.001 88.001 0 0 1 216.002 104zm-16 0a72 72 0 0 0-73.74-71.98c-38.956.918-70.473 33.39-70.259 72.387a71.658 71.658 0 0 0 27.637 56.307a31.922 31.922 0 0 1 12.362 25.255V192h64v-6.024a32.138 32.138 0 0 1 12.468-25.345A71.636 71.636 0 0 0 200.002 104zm-16.788-9.396a55.85 55.85 0 0 0-45.764-45.708a8 8 0 1 0-2.655 15.777a39.84 39.84 0 0 1 32.644 32.604a8.003 8.003 0 0 0 7.878 6.664a8.103 8.103 0 0 0 1.347-.113a8 8 0 0 0 6.55-9.224z" fill="currentColor"></path></svg>`
                     }]);
                 } else {
+                    //If there's no quick answer send the first link from google instead.
+                    // TODO: Add icons to this when results are shown in the page (main.js)
                     sendResponse([{
                         //First link
                         subtitle: "First link from google",
@@ -140,6 +156,7 @@ chrome.runtime.onMessage.addListener(
 
 setInterval(updateStuff, 2000);
 
+//This is called regularly to prevent delay when the popup is opened, without it it takes ~500ms to open the popup because it has to get bookmarks, tabs, history, downloads etc.
 async function updateStuff(){
     //Make it open faster by just polling. Not super efficient, I know
      stuff = {
@@ -150,15 +167,21 @@ async function updateStuff(){
     }
     return;
 }
-async function main(){
+
+//Run the extension
+async function main(tab){
+    //Fetch requests are cached
     let vue = await fetch("vue.js").then(res => res.text());
     let math = await fetch("math.js").then(res => res.text());
     let script = await fetch("main.js").then(res => res.text());
-    let {id: tab} = await new Promise(res => chrome.tabs.query({currentWindow: true, active : true}, ([t]) => res(t)));
+    //If we pass a tab to the main function
+    let {id: tab} = tab.id || await new Promise(res => chrome.tabs.query({currentWindow: true, active : true}, ([t]) => res(t)));
     if (!Object.keys(stuff).length){
         await updateStuff();
     }
+    //Generate the code to run in the tab.
     let code = interpolate({
+            //These are variables passed
             style: await fetch("popup_style.css").then(res => res.text()),
             popupHTML: await fetch("popup.html").then(res => res.text()),
             ...stuff,
@@ -172,9 +195,11 @@ async function main(){
             },
             itemsLength: {downloads: stuff.downloads.length, combined: Object.values(stuff).flat().length, history: stuff.history.length, bookmarks: stuff.bookmarks.length, tabs: stuff.tabs.length},
         }, [
+         //These are scripts, they can be either strings or functions.
          vue,
          math,
          () => {
+            //Don't remove: Caused error but I forgot what
             window.Vue = Vue;
             let s = document.createElement("style");
             s.innerHTML = style;
@@ -196,6 +221,7 @@ async function main(){
     console.log({index});
 }
 
+//Recursively get bookmarks
 async function getBookmarks(){
     return new Promise(res => {
         let bookmarks = [];
@@ -223,7 +249,7 @@ async function getBookmarks(){
     });
 }
 
-
+//Generate a nice script with specified variables, and scripts added in.
 function interpolate(vars, scripts){
     scripts = scripts.map(i => {
         if (typeof i === "function"){
@@ -253,6 +279,7 @@ function unique(array, compareObjects) {
     }, []);
 }
 
+//Cache fetch requests
 ;((window) => {
   var _fetch = window.fetch; //Get the original fetch functionm
 
