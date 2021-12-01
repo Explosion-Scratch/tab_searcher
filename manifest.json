@@ -9,7 +9,7 @@
         "search": {
           "suggested_key": {
             "default": "Ctrl+Space",
-            "mac": "Command+Space"
+            "mac": "Command+Shift+Space"
           },
           "description": "Run the extension"
         }
