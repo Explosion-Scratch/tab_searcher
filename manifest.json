@@ -5,13 +5,14 @@
     "background": {"scripts": ["fuse.js", "background.js"]},
     "permissions": ["tabs", "history", "bookmarks", "commands", "<all_urls>", "downloads"],
     "manifest_version": 2,
+    "browser_action": {},
     "commands": {
         "search": {
           "suggested_key": {
             "default": "Ctrl+Space",
             "mac": "Command+Shift+Space"
           },
-          "description": "Run the extension"
+          "description": "Open the search window"
         }
     }
 }
