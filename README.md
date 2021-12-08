@@ -1,3 +1,5 @@
+![](logo.png)
+
 # Tab searching extension
 A beautiful tab, bookmarks, history, and downloads searcher (beta)
 | Images | More images |  |

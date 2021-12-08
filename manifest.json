@@ -1,7 +1,7 @@
 {
-    "name": "Spotlight search for chrome",
-    "description": "test",
-    "version": "0.0.1",
+    "name": "FINDEX",
+    "description": "The quickest way to search tabs, history, bookmarks, and even the web! (It's like find index, sorry, the name's stupid, ikikik)",
+    "version": "1.0.0",
     "background": {"scripts": ["fuse.js", "background.js"]},
     "permissions": ["tabs", "history", "bookmarks", "commands", "<all_urls>", "downloads"],
     "manifest_version": 2,
