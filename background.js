@@ -1,5 +1,15 @@
 //background.js
-
+/* 
+FILES:
+- background.js: This script, searches everything and sends message to the active tab when the extension is activated
+- fuse.js: An open source fuzzy searching library with 13k stars: https://github.com/krisk/Fuse
+- vue.js: Vue.js: https://github.com/vuejs/vue An extremely popular UI framework
+- math.js: An open source math evaluator https://github.com/josdejong/mathjs
+- top_sites.csv: A list of the top 1 million websites (from alexa top sites database)
+- popup.html: The HTML content of the popup, injected into the tab at runtime.
+- main.js: The main script that runs in the tab when the extension is activated. 
+- popup_style.css: The CSS for the popup
+*/
 chrome.commands.onCommand.addListener((command) => {
     if (command === "search"){
         main();
@@ -129,25 +139,6 @@ chrome.runtime.onMessage.addListener(
                 }
             } catch(_){ console.error(_); sendResponse([])}
         })();
-        //Old version
-        /* 
-        fetch(`https://apis.explosionscratc.repl.co/quick-answer?q=${encodeURIComponent(request.query)}`)
-            .then(res => res.json())
-            .then((quickAnswer) => {
-                console.log({quickAnswer});
-                if (!quickAnswer.error){
-                    let r = [{
-                        highlight: true, 
-                        subtitle: "Quick answer from Wolfram Alpha AI", 
-                        title: quickAnswer.text, 
-                        icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--ph" width="32" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 256"><path d="M176.002 232a8 8 0 0 1-8 8h-80a8 8 0 1 1 0-16h80a8 8 0 0 1 8 8zm40-128a87.543 87.543 0 0 1-33.641 69.208a16.23 16.23 0 0 0-6.359 12.768V192a16.018 16.018 0 0 1-16 16h-64a16.018 16.018 0 0 1-16-16v-6.031a16.018 16.018 0 0 0-6.229-12.66a87.576 87.576 0 0 1-33.77-68.814c-.262-47.662 38.264-87.35 85.882-88.47A88.001 88.001 0 0 1 216.002 104zm-16 0a72 72 0 0 0-73.74-71.98c-38.956.918-70.473 33.39-70.259 72.387a71.658 71.658 0 0 0 27.637 56.307a31.922 31.922 0 0 1 12.362 25.255V192h64v-6.024a32.138 32.138 0 0 1 12.468-25.345A71.636 71.636 0 0 0 200.002 104zm-16.788-9.396a55.85 55.85 0 0 0-45.764-45.708a8 8 0 1 0-2.655 15.777a39.84 39.84 0 0 1 32.644 32.604a8.003 8.003 0 0 0 7.878 6.664a8.103 8.103 0 0 0 1.347-.113a8 8 0 0 0 6.55-9.224z" fill="currentColor"></path></svg>`
-                    }];
-                    console.log({r, sendResponse});
-                    sendResponse(r);
-                } else {sendResponse([])};
-            });
-        */
-        
         //Makes it async (I think)
         return true;
     }
@@ -180,6 +171,7 @@ async function main(tab){
         await updateStuff();
     }
     //Generate the code to run in the tab.
+    // The interpolate takes an object of variables, and a list of scripts, and bundles one script. See line 245 for details.
     let code = interpolate({
             //These are variables passed
             style: await fetch("popup_style.css").then(res => res.text()),
@@ -327,6 +319,10 @@ function unique(array, compareObjects) {
 })(globalThis);
 
 async function answer(q) {
+    // This fetches https://google.com/search?q=whatever  using my cors proxy. This cors proxy is cors-anywhere, a popular NPM package.
+    // It is open source here: https://replit.com/@ExplosionScratc/cors
+    // This proxy was made by me and I solemnly swear it does not log or do anything fishy. See the code for proof.
+    // It proxies any request through node.js e.g. https://cors.explosionscratc.repl.co/example.com fetches example.com but avoids CORS errors.
   var html = await fetch(
     `https://cors.explosionscratc.repl.co/google.com/search?q=${encodeURI(q)}`,
     {
@@ -336,6 +332,7 @@ async function answer(q) {
       },
     }
   ).then((res) => res.text());
+  // Parses the google results' page as a HTML document then scrapes it for answers
   window.d = new DOMParser().parseFromString(html, "text/html");
   var el =
     d.querySelector("[id*='lrtl-translation-text']") ||

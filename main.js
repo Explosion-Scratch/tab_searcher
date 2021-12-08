@@ -46,7 +46,7 @@ let app = Vue.createApp({
         watch: {
             query(){
                 //Debounced
-                this.fetchWolframAlpha();
+                this.getQuickAnswers();
                 if (Object.keys(this.shortcuts).includes(this.query.split(" ")[0]) && this.query.endsWith(" ")){
                     this.searchType = this.shortcuts[this.query.split(" ")[0]];
                     this.query = "";
@@ -110,7 +110,7 @@ let app = Vue.createApp({
 				e.style.width = measuredWidth + 20 + "px";
                 this.getResults();
 			},
-            fetchWolframAlpha: debounce(() => {
+            getQuickAnswers: debounce(() => {
                 if (app.searchType !== "combined"){
                     return;
                 }
