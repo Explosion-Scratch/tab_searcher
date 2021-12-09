@@ -3,7 +3,7 @@
     "description": "The quickest way to search tabs, history, bookmarks, downloads, and even the web!",
     "version": "1.0.0",
     "background": {"scripts": ["fuse.js", "background.js"]},
-    "permissions": ["tabs", "history", "bookmarks", "commands", "<all_urls>", "downloads"],
+    "permissions": ["tabs", "history", "bookmarks", "commands", "activeTab", "downloads"],
     "manifest_version": 2,
     "browser_action": {},
     "icons": { 
