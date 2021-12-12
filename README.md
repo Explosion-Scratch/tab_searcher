@@ -1,7 +1,11 @@
-![logo](logo.png)
+<hr>
+<h1 align=center>Findex</h1>
+<img src=logo.png align=center>
 
-# Tab searching extension
-A beautiful tab, bookmarks, history, and downloads searcher (beta)
+<div align=center><i>A beautiful tab, bookmarks, history, and downloads searcher (beta)</i></div><br>
+<div align=center><i><a href=https://www.youtube.com/watch?v=NHBkXefU5qE>View YouTube video</a> - <a href=https://chrome.google.com/webstore/detail/bkkpiihclpmelfmgncnleakfedbffhaa>Chrome Webstore</a></i></div>
+<hr>
+
 | Images | More images |  |
 |---|---|---|
 | <img src="https://user-images.githubusercontent.com/61319150/143915304-d37d3496-b238-4afa-a171-b61e67bdf9c9.png"> | <img src="https://user-images.githubusercontent.com/61319150/143895130-8a0ee5d3-f014-4c7c-886f-5cb0dfaae2f6.png"> |  |
